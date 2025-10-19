@@ -6,7 +6,7 @@ from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.docs_definitions import CarFootnote, CarHarness, CarDocs, CarParts, Column, Device
 from opendbc.car.fw_query_definitions import FwQueryConfig, Request, StdQueries, p16
 
-from opendbc.sunnypilot.car.honda.values_ext import HondaFlagsSP
+from opendbc.sunnypilot.car.honda.values_ext import HondaFlagsSP, HondaFlagsRP
 
 Ecu = structs.CarParams.Ecu
 VisualAlert = structs.CarControl.HUDControl.VisualAlert
@@ -346,16 +346,18 @@ class CAR(Platforms):
     [HondaCarDocs("Honda Civic 2016-18", min_steer_speed=12. * CV.MPH_TO_MS, video="https://youtu.be/-IkImTe1NYE")],
     CarSpecs(mass=1326, wheelbase=2.70, centerToFrontRatio=0.4, steerRatio=15.38),  # 10.93 is end-to-end spec
     radar_dbc_dict('honda_civic_touring_2016_can_generated'),
-    flags=HondaFlags.HAS_ALL_DOOR_STATES
+    flags=HondaFlags.HAS_ALL_DOOR_STATES,
+    rp_flags=HondaFlagsRP.NIDEC_PEDAL_TUNE,
   )
 
   # port extensions
   HONDA_CLARITY = HondaNidecPlatformConfig(
-    [HondaCarDocs("Honda Clarity 2018-21", min_steer_speed=3. * CV.MPH_TO_MS)],
+    [HondaCarDocs("Honda Clarity 2018-21", min_steer_speed=0. * CV.MPH_TO_MS)],
     CarSpecs(mass=4052. * CV.LB_TO_KG, wheelbase=2.75, centerToFrontRatio=0.41, steerRatio=16.50, tireStiffnessFactor=1.),
     radar_dbc_dict('honda_clarity_hybrid_2018_can_generated'),
     flags=HondaFlags.HAS_ALL_DOOR_STATES,
     sp_flags=HondaFlagsSP.CLARITY,
+    rp_flags=HondaFlagsRP.NIDEC_PEDAL_TUNE,
   )
 
 
@@ -365,6 +367,9 @@ HONDA_BOSCH = CAR.with_flags(HondaFlags.BOSCH)
 HONDA_BOSCH_RADARLESS = CAR.with_flags(HondaFlags.BOSCH_RADARLESS)
 HONDA_BOSCH_CANFD = CAR.with_flags(HondaFlags.BOSCH_CANFD)
 HONDA_BOSCH_ALT_RADAR = CAR.with_flags(HondaFlags.BOSCH_ALT_RADAR)
+
+
+HONDA_NIDEC_PEDAL_TUNE = CAR.with_rp_flags(HondaFlagsRP.NIDEC_PEDAL_TUNE)
 
 
 DBC = CAR.create_dbc_map()
