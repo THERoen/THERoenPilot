@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from numpy import sign
+
 from opendbc.car import get_safety_config, structs, uds
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.disable_ecu import disable_ecu
@@ -8,7 +10,7 @@ from opendbc.car.honda.values import CarControllerParams, HondaFlags, CAR, HONDA
 from opendbc.car.honda.carcontroller import CarController
 from opendbc.car.honda.carstate import CarState
 from opendbc.car.honda.radar_interface import RadarInterface
-from opendbc.car.interfaces import CarInterfaceBase
+from opendbc.car.interfaces import CarInterfaceBase, TorqueFromLateralAccelCallbackType
 
 from opendbc.sunnypilot.car.honda.values_ext import HondaFlagsSP, HondaSafetyFlagsSP
 
@@ -38,6 +40,31 @@ class CarInterface(CarInterfaceBase):
       ACCEL_MAX_VALS = [CarControllerParams.NIDEC_ACCEL_MAX, 0.2]
       ACCEL_MAX_BP = [cruise_speed - 2., cruise_speed - .2]
       return CarControllerParams.NIDEC_ACCEL_MIN, interp(current_speed, ACCEL_MAX_BP, ACCEL_MAX_VALS)
+
+  def torque_from_lateral_accel_modded(self, lateral_acceleration: float, torque_params: structs.CarParams.LateralTorqueTuning) -> float:
+    threshold = 0.9
+    # 0.8 is intuitive since modded torque only occurs after 80% of max torque, but due to total system lag, 0.9 seems to trace curves the smoothest without going into too much steering
+    threshold_lat_accel = 1/torque_params.latAccelFactor * threshold
+    # as per Aragon, raise lateral acceleration factor = torque gets spread out over a larger surface area
+    # lowering = it’s reduced over the surface area and thus you turn early
+    # Raise mod_factor will only affect the way the modded part of the torque curve responds,
+    # so it’s a more straightforward solution so you don’t mess up accuracy while driving straight or at low torque instances
+    mod_factor = 2.0 # <-- CHANGE THIS
+    # The default is a linear relationship between torque and lateral acceleration (accounting for road roll and steering friction)
+    if abs(lateral_acceleration) > threshold_lat_accel:
+      modded_lat_accel_factor = float(torque_params.latAccelFactor) * mod_factor
+      excess_lat_accel = abs(lateral_acceleration) - threshold_lat_accel
+      torque = float(sign(lateral_acceleration)) * threshold_lat_accel / float(torque_params.latAccelFactor)
+      torque += float(sign(lateral_acceleration)) * excess_lat_accel / modded_lat_accel_factor
+    else:
+      torque = lateral_acceleration / float(torque_params.latAccelFactor)
+    return torque
+
+  def torque_from_lateral_accel(self) -> TorqueFromLateralAccelCallbackType:
+    if self.CP_SP.flags & HondaFlagsSP.EPS_MODIFIED:
+      return self.torque_from_lateral_accel_modded
+    else:
+      return self.torque_from_lateral_accel_linear
 
   @staticmethod
   def _get_params(ret: structs.CarParams, candidate, fingerprint, car_fw, alpha_long, is_release, docs) -> structs.CarParams:
