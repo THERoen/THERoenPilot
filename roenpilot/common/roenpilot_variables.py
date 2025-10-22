@@ -1,3 +1,5 @@
+# longitudinal
+
 # acceleration
 
 # ISO 15622:2018
@@ -21,3 +23,8 @@ ISO_MAX_BP = [ISO_VELOCITY_START, ISO_VELOCITY_TRANSITION, ISO_VELOCITY_STEADY_S
 
 # FP Custom Breakpoints
 A_CRUISE_MAX_BP_CUSTOM =  [0.0,  5., 10., 15., 20., 25., 40.]
+
+# lateral
+
+# acceleration
+MINIMUM_LATERAL_ACCELERATION = 1.3        # m/s^2, typical minimum lateral acceleration when taking curves

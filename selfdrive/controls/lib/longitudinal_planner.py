@@ -17,6 +17,7 @@ from openpilot.selfdrive.car.cruise import V_CRUISE_MAX, V_CRUISE_UNSET
 from openpilot.common.swaglog import cloudlog
 
 from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlannerSP
+from roenpilot.common.roenpilot_variables import MINIMUM_LATERAL_ACCELERATION
 
 LON_MPC_STEP = 0.2  # first step is 0.2s
 A_CRUISE_MAX_VALS = [1.6, 1.2, 0.8, 0.6]
@@ -46,7 +47,7 @@ def limit_accel_in_turns(v_ego, angle_steers, a_target, CP):
   # The lookup table for turns should also be updated if we do this
   a_total_max = interp(v_ego, _A_TOTAL_MAX_BP, _A_TOTAL_MAX_V)
   a_y = v_ego ** 2 * angle_steers * CV.DEG_TO_RAD / (CP.steerRatio * CP.wheelbase)
-  a_x_allowed = sqrt(max(a_total_max ** 2 - a_y ** 2, 0.))
+  a_x_allowed = sqrt(max(a_total_max ** 2 - a_y ** 2, 0.)) if abs(a_y) > MINIMUM_LATERAL_ACCELERATION else a_target[1]
 
   return [a_target[0], min(a_target[1], a_x_allowed)]
 
