@@ -4,6 +4,7 @@ from numpy import sin, zeros, interp as npinterp
 
 import cereal.messaging as messaging
 from opendbc.car.interfaces import ACCEL_MIN, ACCEL_MAX
+from opendbc.car.honda.values import HONDA_NIDEC_PEDAL_TUNE
 from openpilot.common.constants import CV
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.common.numpy_fast import clip, interp
@@ -18,6 +19,7 @@ from openpilot.common.swaglog import cloudlog
 
 from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlannerSP
 from roenpilot.common.roenpilot_variables import MINIMUM_LATERAL_ACCELERATION
+from roenpilot.controls.lib.roenpilot_acceleration import get_max_accel_eco, get_max_accel_sport, get_max_allowed_accel
 
 LON_MPC_STEP = 0.2  # first step is 0.2s
 A_CRUISE_MAX_VALS = [1.6, 1.2, 0.8, 0.6]
@@ -126,7 +128,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     prev_accel_constraint = not (reset_state or sm['carState'].standstill)
 
     if mode == 'acc':
-      accel_clip = [ACCEL_MIN, get_max_accel(v_ego)]
+      accel_clip = [ACCEL_MIN, get_max_allowed_accel(v_ego)] if self.CP.carFingerprint in HONDA_NIDEC_PEDAL_TUNE else [ACCEL_MIN, get_max_accel(v_ego)]
       steer_angle_without_offset = sm['carState'].steeringAngleDeg - sm['liveParameters'].angleOffsetDeg
       accel_clip = limit_accel_in_turns(v_ego, steer_angle_without_offset, accel_clip, self.CP)
     else:
