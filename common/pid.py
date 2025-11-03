@@ -1,13 +1,18 @@
-import numpy as np
 from numbers import Number
 
+from roenpilot.common.numpy_fast import clip, interp
+
 class PIDController:
-  def __init__(self, k_p, k_i, k_d=0., pos_limit=1e308, neg_limit=-1e308, rate=100):
+  def __init__(self, k_p, k_i, k_d=0., pos_limit=1e308, neg_limit=-1e308, rate=100,
+               pos_p_limit=None, neg_p_limit=None):
     self._k_p: list[list[float]] = [[0], [k_p]] if isinstance(k_p, Number) else k_p
     self._k_i: list[list[float]] = [[0], [k_i]] if isinstance(k_i, Number) else k_i
     self._k_d: list[list[float]] = [[0], [k_d]] if isinstance(k_d, Number) else k_d
 
     self.set_limits(pos_limit, neg_limit)
+
+    self.pos_p_limit = pos_p_limit
+    self.neg_p_limit = neg_p_limit
 
     self.i_dt = 1.0 / rate
     self.speed = 0.0
@@ -16,15 +21,15 @@ class PIDController:
 
   @property
   def k_p(self):
-    return np.interp(self.speed, self._k_p[0], self._k_p[1])
+    return interp(self.speed, self._k_p[0], self._k_p[1])
 
   @property
   def k_i(self):
-    return np.interp(self.speed, self._k_i[0], self._k_i[1])
+    return interp(self.speed, self._k_i[0], self._k_i[1])
 
   @property
   def k_d(self):
-    return np.interp(self.speed, self._k_d[0], self._k_d[1])
+    return interp(self.speed, self._k_d[0], self._k_d[1])
 
   def reset(self):
     self.p = 0.0
@@ -40,6 +45,11 @@ class PIDController:
   def update(self, error, error_rate=0.0, speed=0.0, feedforward=0., freeze_integrator=False):
     self.speed = speed
     self.p = self.k_p * float(error)
+    if self.pos_p_limit is not None and self.p > self.pos_p_limit:
+      self.p = self.pos_p_limit
+    elif self.neg_p_limit is not None and self.p < self.neg_p_limit:
+      self.p = self.neg_p_limit
+
     self.d = self.k_d * error_rate
     self.f = feedforward
 
@@ -50,8 +60,8 @@ class PIDController:
       test_control = self.p + i + self.d + self.f
       i_upperbound = self.i if test_control > self.pos_limit else self.pos_limit
       i_lowerbound = self.i if test_control < self.neg_limit else self.neg_limit
-      self.i = np.clip(i, i_lowerbound, i_upperbound)
+      self.i = clip(i, i_lowerbound, i_upperbound)
 
     control = self.p + self.i + self.d + self.f
-    self.control = np.clip(control, self.neg_limit, self.pos_limit)
+    self.control = clip(control, self.neg_limit, self.pos_limit)
     return self.control
